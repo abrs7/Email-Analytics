@@ -1,0 +1,6 @@
+#Python Bytecode
+__pycache__/
+# Database Migration
+migrations/
+#Environment keys(secret keys)
+secrets/
