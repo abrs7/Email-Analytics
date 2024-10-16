@@ -17,11 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from utils.google_authorize import authorize, oauth2callback
-from main import views
+from main.views import GmailDataView
 urlpatterns = [
     path('admin/', admin.site.urls),
     
     path('authorize/', authorize, name='authorize'),
     path('oauth2callback/', oauth2callback, name='oauth2callback'),
-    path('gmail_data/', views.gmail_data, name='gmail_data'),
+    path('gmail-data/', GmailDataView.as_view(), name='gmail_data'),
 ]
