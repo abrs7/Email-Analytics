@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from utils.google_authorize import authorize, oauth2callback
 from main.views import GmailDataView
 urlpatterns = [
@@ -24,4 +24,5 @@ urlpatterns = [
     path('authorize/', authorize, name='authorize'),
     path('oauth2callback/', oauth2callback, name='oauth2callback'),
     path('gmail-data/', GmailDataView.as_view(), name='gmail_data'),
+    path('api/', include('main.urls')),
 ]
