@@ -4,4 +4,5 @@ __pycache__/
 migrations/
 #Environment keys(secret keys)
 secrets/
+.env
 db.sqlite3
