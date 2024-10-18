@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from decouple import config
 from pathlib import Path
 import dj_database_url
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,14 +24,27 @@ if ENVIRONMENT == 'development':
     DEBUG = True
 else:
     DEBUG = False    
-
-ALLOWED_HOSTS = ['email-analytics-g2e9.onrender.com','localhost','127.0.0.1','13.228.225.19']
-
+ALLOWED_HOSTS = [
+    'email-analytics-g2e9.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    '13.228.225.19',
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://email-analytics-g2e9.onrender.com',
     'https://www.email-analytics-g2e9.onrender.com',
 ]
+
+class DebugHostMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print(f"Received Host: {request.get_host()}")
+        return self.get_response(request)
+
+
 
 
 # USE_X_FORWARDED_HOST = True
@@ -68,6 +82,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'settings.DebugHostMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
