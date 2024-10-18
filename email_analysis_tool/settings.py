@@ -24,17 +24,11 @@ if ENVIRONMENT == 'development':
     DEBUG = True
 else:
     DEBUG = False    
-ALLOWED_HOSTS = [
-    'email-analytics-g2e9.onrender.com',
-    'localhost',
-    '127.0.0.1',
-    '13.228.225.19',
-]
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://email-analytics-g2e9.onrender.com',
-    'https://www.email-analytics-g2e9.onrender.com',
-]
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'email-analytics-surl.onrender.com']
+
+CSRF_TRUSTED_ORIGINS = ['https://email-analytics-surl.onrender.com',]
 
 class DebugHostMiddleware:
     def __init__(self, get_response):
