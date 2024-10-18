@@ -24,7 +24,7 @@ if ENVIRONMENT == 'development':
 else:
     DEBUG = False    
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','email-analytics-g2e9.onrender.com' ,]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','email-analytics-g2e9.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [ 'https://email-analytics-g2e9.onrender.com']
 
