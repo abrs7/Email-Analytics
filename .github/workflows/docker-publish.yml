@@ -33,8 +33,9 @@ jobs:
 
       - name: Tag Docker Image
         run: |
-          docker tag email_analysis_tool-web ghcr.io/abrs7/email_analysis_tool:latest
-
+          docker tag email_analysis_tool-web:latest ghcr.io/abrs7/email_analysis_tool:latest
       - name: Push Docker Image
         run: |
           docker push ghcr.io/abrs7/email_analysis_tool:latest
+      
+    
