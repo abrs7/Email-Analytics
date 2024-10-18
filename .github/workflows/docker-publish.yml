@@ -18,5 +18,5 @@ jobs:
 
       - name: Build and Publish Docker Image
         run: |
-          docker built -t ghcr.io/abrs7/email_analysis_tool:latest
+          docker build -t ghcr.io/abrs7/email_analysis_tool:latest
           docker push ghcr.io/abrs7/email_analysis_tool:latest
