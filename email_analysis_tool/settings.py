@@ -82,7 +82,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'settings.DebugHostMiddleware',
+    
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
