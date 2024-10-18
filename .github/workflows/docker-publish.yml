@@ -13,26 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Docker and Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-
       - name: Log in to GHCR
         run: echo "${{ secrets.MY_PAT }}" | docker login ghcr.io --username abrs7 --password-stdin
 
-      - name: Build Docker Image
+      - name: Build and Publish Docker Image
         run: |
-          docker-compose build --no-cache web
-
-      - name: List All Docker Images
-        run: |
-          docker images
-
-      - name: Tag Docker Image
-        run: |
-          docker tag email_analysis_tool-web:latest ghcr.io/abrs7/email_analysis_tool:latest
-
-      - name: Push Docker Image
-        run: |
+          docker built -t ghcr.io/abrs7/email_analysis_tool:latest
           docker push ghcr.io/abrs7/email_analysis_tool:latest
