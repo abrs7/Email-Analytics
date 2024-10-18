@@ -1,0 +1,29 @@
+name: Publish Docker Images to GHCR
+
+on:
+  push:
+    branches:
+      - main  # Trigger only pushes to the main branch
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.MY_PAT }}" | docker login ghcr.io --username abrs7 --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          docker-compose build web  # Build only the web service
+
+      - name: Tag Docker Image
+        run: |
+          docker tag email_analysis_tool-web ghcr.io/$abrs7/email_analysis_tool:latest
+
+      - name: Push Docker Image
+        run: |
+          docker push ghcr.io/$abrs7/email_analysis_tool:latest
