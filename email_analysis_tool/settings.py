@@ -32,7 +32,14 @@ ALLOWED_HOSTS = [
 ]
 
 
-CSRF_TRUSTED_ORIGINS = [ 'https://email-analytics-g2e9.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    'https://email-analytics-g2e9.onrender.com',
+    'https://www.email-analytics-g2e9.onrender.com',
+]
+
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Quick-start development settings - unsuitable for production
