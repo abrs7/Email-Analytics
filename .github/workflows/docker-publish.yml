@@ -16,10 +16,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Install Docker Compose
+      - name: Install Docker and Docker Compose
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin
+          sudo apt-get install -y curl
+          curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose version  # Verify installation
 
       - name: Log in to GHCR
         run: echo "${{ secrets.MY_PAT }}" | docker login ghcr.io --username abrs7 --password-stdin
