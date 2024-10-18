@@ -28,7 +28,7 @@ ALLOWED_HOSTS = [
     'email-analytics-g2e9.onrender.com',
     'localhost',
     '127.0.0.1',
-    'www.email-analytics-g2e9.onrender.com'
+    '*',
 ]
 
 
