@@ -11,9 +11,22 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 from decouple import config
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+ENVIRONMENT = config('ENVIRONMENT')
+
+if ENVIRONMENT == 'development':
+    DEBUG = True
+else:
+    DEBUG = False    
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django-docker-cdm3.onrender.com', 'django-docker-latest.onrender.com']
+
+CSRF_TRUSTED_ORIGINS = [ 'https://django-docker-cdm3.onrender.com' ,'https://django-docker-latest.onrender.com']
 
 
 # Quick-start development settings - unsuitable for production
@@ -90,6 +103,21 @@ DATABASES = {
         'PORT': config('DB_PORT'),
     }
 }
+if ENVIRONMENT == 'development':
+    DATABASES = {
+        'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+    }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.parse(config('DATABASE_URL', default='postgres://'))
+    }
 
 
 # Password validation
