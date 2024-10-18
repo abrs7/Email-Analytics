@@ -24,12 +24,7 @@ if ENVIRONMENT == 'development':
 else:
     DEBUG = False    
 
-ALLOWED_HOSTS = [
-    'email-analytics-g2e9.onrender.com',
-    'localhost',
-    '127.0.0.1',
-    '13.228.225.19'
-]
+ALLOWED_HOSTS = ['email-analytics-g2e9.onrender.com','localhost','127.0.0.1','13.228.225.19']
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -38,8 +33,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# USE_X_FORWARDED_HOST = True
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Quick-start development settings - unsuitable for production
