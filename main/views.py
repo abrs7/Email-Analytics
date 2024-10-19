@@ -21,26 +21,32 @@ class GmailDataView(APIView):
             return redirect('authorize')
 
         # Load credentials from session
-        creds = Credentials(
-            token=creds_data['token'],
-            refresh_token=creds_data['refresh_token'],
-            token_uri=creds_data['token_uri'],
-            client_id=creds_data['client_id'],
-            client_secret=creds_data['client_secret'],
-            scopes=creds_data['scopes']
-        )
+        try:
+            creds = Credentials(
+                token=creds_data['token'],
+                refresh_token=creds_data['refresh_token'],
+                token_uri=creds_data['token_uri'],
+                client_id=creds_data['client_id'],
+                client_secret=creds_data['client_secret'],
+                scopes=creds_data['scopes']
+            )
+        except KeyError as e:
+            return Response({"error": f"Missing credential field: {str(e)}"}, status=400)     
 
         # Refresh the token if expired
         if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            request.session['credentials'] = {
-                'token': creds.token,
-                'refresh_token': creds.refresh_token,
-                'token_uri': creds.token_uri,
-                'client_id': creds.client_id,
-                'client_secret': creds.client_secret,
-                'scopes': creds.scopes
-            }
+            try:
+                creds.refresh(Request())
+                request.session['credentials'] = {
+                    'token': creds.token,
+                    'refresh_token': creds.refresh_token,
+                    'token_uri': creds.token_uri,
+                    'client_id': creds.client_id,
+                    'client_secret': creds.client_secret,
+                    'scopes': creds.scopes
+                }
+            except Exception as e:
+                return Response({"error": f"Failed to refresh credentials: {str(e)}"}, status=500)    
 
         # Build Gmail API service
         service = build('gmail', 'v1', credentials=creds)

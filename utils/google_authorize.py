@@ -46,6 +46,7 @@ def authorize(request):
     flow = get_flow()
     authorize_url, state = flow.authorization_url(
         access_type='offline',
+        prompt='consent',
         include_granted_scopes='true'
     )
     request.session['state'] = state
