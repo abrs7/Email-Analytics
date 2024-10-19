@@ -3,14 +3,15 @@ from django.utils import timezone
 from django.shortcuts import redirect
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
-from utils.nlp_utils import extract_email_entities
+from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
 from django.http import JsonResponse
 from utils.email_utils import get_headers_value
 from .models import EmailMetadata
-from .serializers import GmailMessageSerializer
+from .serializers import GmailMessageSerializer, EmailMetadataSerializer
 
 class GmailDataView(APIView):
     def get(self, request, *args, **kwargs):
@@ -91,6 +92,10 @@ def fetch_and_store_emails(request):
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
 
         email_body = msg.get('snippet', '')  # Get a short preview of the email
+        email_length = len(email_body)
+        bullet_points = find_bullet_poits(email_body)
+        # Extract keywords from email content using NLP
+        keywords = extract_keywords(email_body)
         metadata = extract_email_entities(email_body)
 
         # Convert the timestamp to a naive datetime as google use a different timezone
@@ -117,7 +122,14 @@ def fetch_and_store_emails(request):
             job_titles=metadata["job_titles"],
             dates=metadata["dates"],
             sent_at=sent_at,
-            responded=False  # Initial value; can update later
+            responded=False , # Initial value; can update later
+            email_length=email_length,
+            bullet_points=bullet_points,
+            keywords=keywords
         )
 
     return JsonResponse({'message': 'Emails processed and saved successfully.'}, status=200)
+
+class EmailMetadataListView(ListAPIView):
+    queryset = EmailMetadata.objects.all()
+    serializer_class = EmailMetadataSerializer
