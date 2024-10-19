@@ -78,7 +78,7 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-    frontend_url = 'http://localhost:5173/#/dashboard'
+    frontend_url = 'http://localhost:5173'
     if frontend_available(frontend_url):
         return redirect(frontend_url)
     else:
