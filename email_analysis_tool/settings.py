@@ -106,7 +106,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'email_analysis_tool.wsgi.application'
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = ["http://localhost:5173"]
 
 
 # Database
