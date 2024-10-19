@@ -2,21 +2,48 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from django.shortcuts import redirect
 import os
+from decouple import config
+
+ENVIRONMENT = config('ENVIRONMENT')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, 'secrets/client_secret.json')
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-REDIRECT_URI = "http://localhost:8000/oauth2callback"  # Matches Google Console URI
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+if ENVIRONMENT == 'production':
+    REDIRECT_URI = "https://email-analytics-surl.onrender.com/oauth2callback"
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+else:
+    REDIRECT_URI = "http://localhost:8000/oauth2callback"
+
+def get_flow():
+    """Create OAuth2 Flow based on the environment."""
+    if ENVIRONMENT == 'production':
+        # Use environment variables in production
+        flow = Flow.from_client_config(
+            {
+                "installed": {
+                    "client_id": config('GOOGLE_CLIENT_ID'),
+                    "client_secret": config('GOOGLE_CLIENT_SECRET'),
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token"
+                }
+            },
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
+        )
+    else:
+        # Use the local JSON file in development
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
+        )
+    return flow
 
 def authorize(request):
     # Ensure the redirect_uri is passed correctly inside the constructor
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI
-    )
+    flow = get_flow()
     authorize_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true'
@@ -28,13 +55,8 @@ def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
     if not state:
         return redirect('authorize')
-
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE, 
-        scopes=SCOPES, 
-        state=state, 
-        redirect_uri=REDIRECT_URI  # Ensure it's redirect_uri
-    )
+    
+    flow = get_flow()
     flow.fetch_token(authorization_response=request.build_absolute_uri())
 
     credentials = flow.credentials
