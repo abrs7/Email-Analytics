@@ -2,6 +2,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from django.shortcuts import redirect
 import os
+import requests
 from decouple import config
 
 ENVIRONMENT = config('ENVIRONMENT')
@@ -52,6 +53,14 @@ def authorize(request):
     request.session['state'] = state
     return redirect(authorize_url)
 
+def frontend_available(url):
+    """Ping the frontend URL to check if it's available."""
+    try:
+        response = requests.head(url, timeout=3)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False    
+
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
     if not state:
@@ -69,5 +78,8 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-
-    return redirect('gmail_data')
+    frontend_url = 'http://localhost:5173/#/dashboard'
+    if frontend_available(frontend_url):
+        return redirect(frontend_url)
+    else:
+        return redirect('gmail_data')
