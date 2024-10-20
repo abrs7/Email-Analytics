@@ -26,7 +26,7 @@ else:
     DEBUG = False    
 
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'email-analytics-surl.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'email-analytics-surl.onrender.com','http://localhost:5173']
 
 CSRF_TRUSTED_ORIGINS = ['https://email-analytics-surl.onrender.com','http://localhost:5173']
 
@@ -108,6 +108,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'email_analysis_tool.wsgi.application'
 # CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ORIGIN_ALLOW_ALL = True
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
