@@ -28,7 +28,7 @@ else:
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'email-analytics-surl.onrender.com']
 
-CSRF_TRUSTED_ORIGINS = ['https://email-analytics-surl.onrender.com',]
+CSRF_TRUSTED_ORIGINS = ['https://email-analytics-surl.onrender.com','http://localhost:5173']
 
 class DebugHostMiddleware:
     def __init__(self, get_response):
@@ -78,8 +78,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
