@@ -79,7 +79,7 @@ def oauth2callback(request):
         'scopes': credentials.scopes
     }
 
-    frontend_url = 'http://localhost:5173/#auth'
+    frontend_url = 'http://localhost:5173/#/auth'
     # if frontend_available(frontend_url):
     return redirect(frontend_url)
     # else:
