@@ -1,6 +1,7 @@
 from datetime import datetime
 from django.utils import timezone
 from django.shortcuts import redirect
+from urllib.parse import urlencode
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
@@ -8,7 +9,8 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
+from decouple import config
 from utils.email_utils import get_headers_value
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
@@ -139,3 +141,18 @@ def fetch_and_store_emails(request):
 class EmailMetadataListView(ListAPIView):
     queryset = EmailMetadata.objects.all()
     serializer_class = EmailMetadataSerializer
+
+
+def google_login(request):
+    params = {
+        'response_type': 'code',
+        'client_id': config('GOOGLE_CLIENT_ID'),
+        'redirect_uri': 'https://email-analytics-surl.onrender.com/oauth2callback',
+        'scope': 'https://www.googleapis.com/auth/gmail.readonly',
+        'state': 'random_state_string',
+        'access_type': 'offline',
+        'prompt': 'consent',
+        'include_granted_scopes': 'true',
+    }
+    google_auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
+    return HttpResponseRedirect(google_auth_url)
