@@ -20,6 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, 'secrets/client_secret.json')
 # SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 SCOPES = [
+    'openid',
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/gmail.readonly'
