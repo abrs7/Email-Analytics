@@ -96,7 +96,7 @@ def oauth2callback(request):
             email=email,
             defaults={
                 'username': username,
-                'first_name': name,
+                # 'first_name': name,
                 'is_active': True
             }
         )
