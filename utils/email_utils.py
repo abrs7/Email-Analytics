@@ -16,3 +16,16 @@ def get_google_user_info(credentials):
         headers={'Authorization': f'Bearer {credentials.token}'}
     )
     return response.json()
+
+def get_email_body(msg):
+    """Extract the full email body from the message payload."""
+    if 'parts' in msg['payload']:
+        for part in msg['payload']['parts']:
+            if part['mimeType'] == 'text/plain':
+                return part['body']['data']
+            elif part['mimeType'] == 'text/html':
+                return part['body']['data']
+    else:
+        return msg['payload']['body']['data']
+    
+    return ''    

@@ -6,6 +6,7 @@ class EmailMetadata(models.Model):
     sender = models.EmailField()
     recipient = models.EmailField()
     subject = models.CharField(max_length=255)
+    email_body = models.TextField()
     persons = models.JSONField()
     organizations = models.JSONField() 
     job_titles = models.JSONField(blank=True, null=True)
