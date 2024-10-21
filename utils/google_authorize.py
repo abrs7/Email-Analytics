@@ -5,6 +5,9 @@ import os
 import requests
 from urllib.parse import quote
 from decouple import config
+import logging
+
+logger = logging.getLogger(__name__)
 
 ENVIRONMENT = config('ENVIRONMENT')
 
@@ -52,12 +55,15 @@ def authorize(request):
         prompt='consent',
         include_granted_scopes='true'
     )
+    logger.info(f"authorized url : {authorize_url},, with state : {state}")
     request.session['state'] = state
     return redirect(authorize_url)
 
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
+    logger.info(f"incoming state : {state}")
     if not state:
+        logger.warning('State not found in session. Redirecting to authorization.')
         return redirect('http://localhost:5177/')
     
     flow = get_flow()
