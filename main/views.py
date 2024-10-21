@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from urllib.parse import urlencode
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import ListAPIView
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -133,15 +134,20 @@ def fetch_and_store_emails(request):
             responded=False , # Initial value; can update later
             email_length=email_length,
             bullet_points=bullet_points,
-            keywords=keywords
+            keywords=keywords,
+            user=request.user
         )
 
     return JsonResponse({'message': 'Emails processed and saved successfully.'}, status=200)
 
 class EmailMetadataListView(ListAPIView):
     queryset = EmailMetadata.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = EmailMetadataSerializer
-
+    
+    def get_queryset(self):
+        # Filter emails to only show those belonging to the logged-in user
+        return EmailMetadata.objects.filter(user=self.request.user)
 
 def google_login(request):
     params = {

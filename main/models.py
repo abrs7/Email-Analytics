@@ -1,6 +1,8 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class EmailMetadata(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     sender = models.EmailField()
     recipient = models.EmailField()
     subject = models.CharField(max_length=255)
