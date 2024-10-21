@@ -55,14 +55,6 @@ def authorize(request):
     request.session['state'] = state
     return redirect(authorize_url)
 
-def frontend_available(url):
-    """Ping the frontend URL to check if it's available."""
-    try:
-        response = requests.head(url, timeout=3)
-        return response.status_code == 200
-    except requests.RequestException:
-        return False    
-
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
     if not state:
@@ -83,7 +75,7 @@ def oauth2callback(request):
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
-    return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
+    # return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
     # else:
-    #     return redirect('gmail_data')
+    return redirect('gmail_data')
 
