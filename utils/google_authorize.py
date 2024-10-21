@@ -58,7 +58,7 @@ def authorize(request):
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
     if not state:
-        return redirect('authorize')
+        return redirect('http://localhost:5177')
     
     flow = get_flow()
     flow.fetch_token(authorization_response=request.build_absolute_uri())
