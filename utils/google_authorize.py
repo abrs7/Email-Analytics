@@ -85,7 +85,9 @@ def oauth2callback(request):
     }
     user_info = get_google_user_info(credentials) 
     email = user_info.get('email')
+    logger.info(f"email : {email}")
     name = user_info.get('name')
+    logger.info(f"name : {name}")
     username = email or f"user_{user_info.get('id', 'anonymous')}"
     
     try:
@@ -98,8 +100,9 @@ def oauth2callback(request):
                 'is_active': True
             }
         )
-    except IntegrityError:
-        return JsonResponse({'error': 'A user with this email or username already exists.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'An error occurred with Google due to: {str(e)}'}, status=400)
+
 
 
     # frontend_url = 'http://localhost:5173'
