@@ -12,8 +12,8 @@ CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, 'secrets/client_secret.json')
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
 if ENVIRONMENT == 'production':
-    # REDIRECT_URI = "https://email-analytics-surl.onrender.com/oauth2callback"
-    REDIRECT_URI = "http://localhost:5173"
+    REDIRECT_URI = "https://email-analytics-surl.onrender.com/oauth2callback"
+    # REDIRECT_URI = "http://localhost:5173"
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 else:
     REDIRECT_URI = "http://localhost:8000/oauth2callback"
