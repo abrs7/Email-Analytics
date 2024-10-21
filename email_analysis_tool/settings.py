@@ -119,6 +119,7 @@ CORS_ALLOW_HEADERS = (
     "x-requested-with",
 )
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 # CORS_ORIGIN_WHITELIST = [
 #     'http://localhost:5173',  
 # ]

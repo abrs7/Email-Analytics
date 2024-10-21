@@ -53,7 +53,7 @@ def authorize(request):
         include_granted_scopes='true'
     )
     request.session['state'] = state
-    return redirect(authorize_url)
+    return redirect(f"http://localhost:5173/authorize?auth_url={quote(authorize_url)}")
 
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
@@ -75,7 +75,7 @@ def oauth2callback(request):
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
-    # return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
+    return redirect(f'http://localhost:5173')
     # else:
-    return redirect('gmail_data')
+    # return redirect('gmail_data')
 
