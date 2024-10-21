@@ -53,12 +53,12 @@ def authorize(request):
         include_granted_scopes='true'
     )
     request.session['state'] = state
-    return redirect(f"http://localhost:5173/authorize?auth_url={quote(authorize_url)}")
+    return redirect(authorize_url)
 
 def oauth2callback(request):
     state = request.session.get('state')  # Safely get state from session
     if not state:
-        return redirect('http://localhost:5177')
+        return redirect('http://localhost:5177/')
     
     flow = get_flow()
     flow.fetch_token(authorization_response=request.build_absolute_uri())
@@ -75,7 +75,7 @@ def oauth2callback(request):
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
-    return redirect(f'http://localhost:5173')
+    return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
     # else:
     # return redirect('gmail_data')
 
