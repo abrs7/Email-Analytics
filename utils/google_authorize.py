@@ -7,6 +7,9 @@ import requests
 from urllib.parse import quote
 from decouple import config
 from .email_utils import get_google_user_info
+from django.contrib.auth import login
+from django.db.utils import IntegrityError
+from django.http import JsonResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,15 +83,28 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-    user_info = get_google_user_info(credentials)
-
+    user_info = get_google_user_info(credentials) 
     email = user_info.get('email')
     name = user_info.get('name')
+    username = email or f"user_{user_info.get('id', 'anonymous')}"
+    
+    try:
+        # Ensure the username and email are set properly
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'username': username,
+                'first_name': name,
+                'is_active': True
+            }
+        )
+    except IntegrityError:
+        return JsonResponse({'error': 'A user with this email or username already exists.'}, status=400)
 
-    user, created = User.objects.get_or_create(username=email, defaults={'email': email, 'first_name': name})
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
+    login(request, user)
     return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
     # else:
     # return redirect('gmail_data')
