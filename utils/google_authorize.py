@@ -3,6 +3,7 @@ from google_auth_oauthlib.flow import Flow
 from django.shortcuts import redirect
 import os
 import requests
+from urllib.parse import quote
 from decouple import config
 
 ENVIRONMENT = config('ENVIRONMENT')
@@ -82,7 +83,7 @@ def oauth2callback(request):
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
-    return redirect('http://localhost:5173?auth_token={credentials.token}')
+    return redirect(f'http://localhost:5173/?auth_token={quote(credentials.token)}')
     # else:
     #     return redirect('gmail_data')
 
