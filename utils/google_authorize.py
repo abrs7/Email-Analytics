@@ -18,7 +18,12 @@ ENVIRONMENT = config('ENVIRONMENT')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_SECRETS_FILE = os.path.join(BASE_DIR, 'secrets/client_secret.json')
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+# SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/gmail.readonly'
+]
 
 if ENVIRONMENT == 'production':
     REDIRECT_URI = "https://email-analytics-surl.onrender.com/oauth2callback"
@@ -83,11 +88,20 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
+    print("Access Token:", credentials.token)
+    print("Refresh Token:", credentials.refresh_token)
+
     # Call the Google UserInfo API to get user info
     user_info_response = requests.get(
         'https://www.googleapis.com/oauth2/v3/userinfo',
         headers={'Authorization': f'Bearer {credentials.token}'}
     )
+    user_info_response = requests.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        headers={'Authorization': f'Bearer {credentials.token}'}
+        )
+    print("User Info Response:", user_info_response.text)
+
 
     if not user_info_response.ok:
         return JsonResponse({'error': 'Failed to fetch user info from Google'}, status=400)
