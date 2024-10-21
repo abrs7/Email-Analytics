@@ -82,7 +82,7 @@ def oauth2callback(request):
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
-    return redirect('http://localhost:5173')
+    return redirect('http://localhost:5173?auth_token={credentials.token}')
     # else:
     #     return redirect('gmail_data')
 
