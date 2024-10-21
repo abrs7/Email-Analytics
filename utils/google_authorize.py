@@ -83,27 +83,28 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-    user_info = get_google_user_info(credentials) 
-    email = user_info.get('email')
-    logger.info(f"email : {email}")
-    name = user_info.get('name')
-    logger.info(f"name : {name}")
-    username = email or f"user_{user_info.get('id', 'anonymous')}"
+    # Call the Google UserInfo API to get user info
+    user_info_response = requests.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        headers={'Authorization': f'Bearer {credentials.token}'}
+    )
+
+    if not user_info_response.ok:
+        return JsonResponse({'error': 'Failed to fetch user info from Google'}, status=400)
+
+    user_info = user_info_response.json()
     
-    try:
-        # Ensure the username and email are set properly
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'username': username,
-                # 'first_name': name,
-                'is_active': True
-            }
-        )
-    except Exception as e:
-        return JsonResponse({'error': f'An error occurred with Google due to: {str(e)}'}, status=400)
+    email = user_info.get('email')
+    print(email)
+    first_name = user_info.get('given_name')
+    print(first_name)
 
+    if not email or not first_name:
+        return JsonResponse({'error': 'Email or First Name not available in response'}, status=400)
 
+    # Create or update the user in your system
+    user, created = User.objects.get_or_create(username=email, defaults={'email': email, 'first_name': first_name})
+    
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
