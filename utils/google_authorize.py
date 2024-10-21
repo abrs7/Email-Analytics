@@ -1,10 +1,12 @@
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from django.shortcuts import redirect
+from django.contrib.auth.models import User
 import os
 import requests
 from urllib.parse import quote
 from decouple import config
+from .email_utils import get_google_user_info
 import logging
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,12 @@ def oauth2callback(request):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
+    user_info = get_google_user_info(credentials)
+
+    email = user_info.get('email')
+    name = user_info.get('name')
+
+    user, created = User.objects.get_or_create(username=email, defaults={'email': email, 'first_name': name})
 
     # frontend_url = 'http://localhost:5173'
     # if frontend_available(frontend_url):
