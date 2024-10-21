@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
-from utils.email_utils import get_headers_value
+from utils.email_utils import get_headers_value, get_email_body
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
 
@@ -106,7 +106,7 @@ def fetch_and_store_emails(request):
         # Extract keywords from email content using NLP
         keywords = extract_keywords(email_body)
         metadata = extract_email_entities(email_body)
-
+        email_body = get_email_body(msg) 
         # Convert the timestamp to a naive datetime as google use a different timezone
         timestamp_ms = int(msg.get('internalDate', 0))
         sent_at_naive = datetime.fromtimestamp(timestamp_ms / 1000)
@@ -116,6 +116,7 @@ def fetch_and_store_emails(request):
         
         sender = get_headers_value(msg['payload']['headers'], 'From')
         recipient = get_headers_value(msg['payload']['headers'], 'To')
+        subject = get_headers_value(msg['payload']['headers'], 'Subject') 
 
         if not sender:
             sender = 'Unknown Sender'
@@ -125,7 +126,8 @@ def fetch_and_store_emails(request):
         EmailMetadata.objects.create(
             sender=sender, 
             recipient=recipient,
-            subject=msg.get('snippet', 'No Subject'),
+            subject=subject,
+            email_body=email_body,
             persons=metadata["persons"],
             organizations=metadata["organizations"],
             job_titles=metadata["job_titles"],
