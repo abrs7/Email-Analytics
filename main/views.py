@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
-from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages
+from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages, extract_email_address
 from utils.func_utils import TIME_SLOTS, classify_email_by_time_slot
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
@@ -225,24 +225,26 @@ def get_time_slot_count(request):
 
         for msg in messages_in_thread:
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
-            sender = headers.get('From', '')
+            sender = extract_email_address(headers.get('From', ''))
             timestamp_ms = int(msg.get('internalDate', 0))
+            
             sent_at = timezone.make_aware(
-                datetime.fromtimestamp(timestamp_ms / 1000), timezone=timezone.get_current_timezone()
+                datetime.fromtimestamp(timestamp_ms / 1000), 
+                timezone=timezone.get_current_timezone()
             )
 
             print(f"Sender: {sender}, Sent at: {sent_at}")
             logger.info(f"Sender: {sender}, Sent at: {sent_at}")
-            if sender.strip() == request.user.email.strip():
+            if sender.lower() == request.user.email.strip().lower():
                 sent_email = sent_at
 
-            elif sent_email and sender != request.user.email:
+            elif sent_email and sender.lower() != request.user.email.strip().lower():
                 time_slot = classify_email_by_time_slot(sent_at)
-                time_slot_counts[time_slot] += 1
+                if time_slot in time_slot_counts:
+                    time_slot_counts[time_slot] += 1
                 break
 
     return JsonResponse(time_slot_counts)
-
 def search_keywords(request):
     """Search for keywords in the email body."""
     q = request.GET.get('q')

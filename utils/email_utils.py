@@ -2,6 +2,7 @@ import requests
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from django.http import JsonResponse
+import re
 
 def get_headers_value(headers, header_name):
     """Utility function to get a specific header from a list of headers."""
@@ -52,3 +53,8 @@ def get_thread_messages(service, thread_id):
     """Fetch all messages within a specific thread."""
     thread = service.users().threads().get(userId='me', id=thread_id).execute()
     return thread.get('messages', [])
+
+def extract_email_address(raw_sender):
+    """Extract email address from 'From' header."""
+    match = re.search(r'<(.*?)>', raw_sender)
+    return match.group(1) if match else raw_sender.strip()
