@@ -2,7 +2,8 @@ from datetime import datetime
 from django.utils import timezone
 from django.shortcuts import redirect, render
 from urllib.parse import urlencode
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
+from collections import Counter
 from django.core.cache import cache
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -330,3 +331,41 @@ def search_multiple_keywords(request):
     cache.set(cache_key, keyword_counts, timeout=60000)
 
     return JsonResponse(keyword_counts)
+
+def get_email_statistics(request):
+    """Retrieve average response time, top used keywords, average email length, and percentage of non-responded emails."""
+    
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'User not authenticated'}, status=403)
+
+    user_emails = EmailMetadata.objects.filter(user=request.user)
+
+    average_email_length = user_emails.aggregate(Avg('email_length'))['email_length__avg'] or 0
+
+    responded_emails = user_emails.filter(responded=True)
+    if responded_emails.exists():
+        response_times = []
+        for email in responded_emails:
+            response_time = email.sent_at - email.created_at  # Assuming you have a `created_at` field
+            response_times.append(response_time.total_seconds())
+        average_response_time = sum(response_times) / len(response_times)
+    else:
+        average_response_time = 0
+
+    all_keywords = []
+    for email in user_emails:
+        all_keywords.extend(email.keywords.split(','))
+    top_keywords = Counter(all_keywords).most_common(5)
+
+    total_sent_emails = user_emails.count()
+    non_responded_count = user_emails.filter(responded=False).count()
+    non_responded_percentage = (non_responded_count / total_sent_emails) * 100 if total_sent_emails > 0 else 0
+
+    statistics = {
+        'average_email_length': average_email_length,
+        'average_response_time': average_response_time,
+        'top_keywords': top_keywords,
+        'non_responded_percentage': non_responded_percentage
+    }
+
+    return JsonResponse(statistics, status=200)
