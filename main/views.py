@@ -2,6 +2,7 @@ from datetime import datetime
 from django.utils import timezone
 from django.shortcuts import redirect, render
 from urllib.parse import urlencode
+from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
