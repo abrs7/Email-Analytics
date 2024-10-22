@@ -124,6 +124,16 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True  # Required for SameSite=None
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL'),
+        'OPTIONS': {
+            'ssl_cert_reqs': None 
+        },
+    }
+}
+
 
 # CORS_ORIGIN_WHITELIST = [
 #     'http://localhost:5173',  

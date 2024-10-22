@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.shortcuts import redirect, render
 from urllib.parse import urlencode
 from django.db.models import Q
+from django.core.cache import cache
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -245,11 +246,23 @@ def get_time_slot_count(request):
 def search_keywords(request):
     """Search for keywords in the email body."""
     q = request.GET.get('q')
+    cache_key = f"search_{q}"
+
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        logger.info("Serving from cache...")
+        return JsonResponse(cached_result, safe=False)
+
+    result = {}
+
     if q:
         if request.user.is_authenticated:
             emails = EmailMetadata.objects.filter(user=request.user, keywords__icontains=q)
-            return JsonResponse(list(emails.values()), safe=False)
-        else :
+            result = list(emails.values())
+            cache.set(cache_key, result, timeout=60000)
+
+            return JsonResponse(result, safe=False)
+        else:
             return JsonResponse({'error': 'User not authenticated'}, status=403)
     else:
         return JsonResponse([])
@@ -257,15 +270,20 @@ def search_keywords(request):
 def search_multiple_keywords(request):
     """
     Search for multiple keywords in the email body and return the frequency 
-    of emails containing each keyword.
+    of emails containing each keyword. Uses Redis caching to store results.
     """
     query = request.GET.get('q')
-    
+
     if not query:
         return JsonResponse({"error": "No keywords provided"}, status=400)
 
-    keywords = [kw.strip() for kw in query.split(",") if kw.strip()]
+    cache_key = f"search_{'_'.join(query.split(',')).strip()}"
 
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return JsonResponse(cached_result)
+
+    keywords = [kw.strip() for kw in query.split(",") if kw.strip()]
     keyword_counts = defaultdict(int)
 
     for keyword in keywords:
@@ -274,4 +292,7 @@ def search_multiple_keywords(request):
         ).count()
         keyword_counts[keyword] = count
 
-    return JsonResponse(keyword_counts)    
+    # Store the result in the cache for 10 minutes
+    cache.set(cache_key, keyword_counts, timeout=60000)
+
+    return JsonResponse(keyword_counts)
