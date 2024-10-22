@@ -204,10 +204,8 @@ def get_response_mail_data_time(request):
                 break
 
     return JsonResponse({'response_times': response_times})
-
 def get_time_slot_count(request):
     """Get the count of emails in each predefined time slot."""
-
     service, error = get_gmail_service(request)
     if error:
         return error
@@ -221,7 +219,7 @@ def get_time_slot_count(request):
         messages_in_thread = get_thread_messages(service, thread_id)
 
         sent_email = None
-
+        
         for msg in messages_in_thread:
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
             sender = headers.get('From', '')
@@ -232,8 +230,8 @@ def get_time_slot_count(request):
 
             if sender == request.user.email:
                 sent_email = sent_at
-            elif sent_email:
-                # If a response email is found, classify it into a time slot
+
+            elif sent_email and sender != request.user.email:
                 time_slot = classify_email_by_time_slot(sent_at)
                 time_slot_counts[time_slot] += 1
                 break
