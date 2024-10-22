@@ -231,12 +231,12 @@ def get_time_slot_count(request):
                 datetime.fromtimestamp(timestamp_ms / 1000), 
                 timezone=timezone.get_current_timezone()
             )
-
-            print(f"Sender: {sender}, Sent at: {sent_at}")
             logger.info(f"Sender: {sender}, Sent at: {sent_at}")
             time_slot = classify_email_by_time_slot(sent_at)
+            logger.info(f"Time slot: {time_slot}")
             if time_slot in time_slot_counts:
                 time_slot_counts[time_slot] += 1
+                logger.info(f"Updated count for {time_slot}: {time_slot_counts[time_slot]}")
         
     logger.info(f"Final time slot counts: {time_slot_counts}")
     return JsonResponse(time_slot_counts)

@@ -13,6 +13,8 @@ TIME_SLOTS = [
 def classify_email_by_time_slot(timestamp):
     """Classify the email's timestamp into a predefined time slot."""
     hour = timestamp.hour
+    print(f"Classifying email sent at hour: {hour}")
+
     for slot, start, end in TIME_SLOTS:
         if start <= hour < end:
             return slot
