@@ -221,7 +221,6 @@ def get_time_slot_count(request):
         thread_id = msg_details.get('threadId')
         messages_in_thread = get_thread_messages(service, thread_id)
 
-        sent_email = None
 
         for msg in messages_in_thread:
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
@@ -235,15 +234,11 @@ def get_time_slot_count(request):
 
             print(f"Sender: {sender}, Sent at: {sent_at}")
             logger.info(f"Sender: {sender}, Sent at: {sent_at}")
-            if sender.lower() == request.user.email.strip().lower():
-                sent_email = sent_at
-
-            elif sent_email and sender.lower() != request.user.email.strip().lower():
-                time_slot = classify_email_by_time_slot(sent_at)
-                if time_slot in time_slot_counts:
-                    time_slot_counts[time_slot] += 1
-                break
-
+            time_slot = classify_email_by_time_slot(sent_at)
+            if time_slot in time_slot_counts:
+                time_slot_counts[time_slot] += 1
+        
+    logger.info(f"Final time slot counts: {time_slot_counts}")
     return JsonResponse(time_slot_counts)
 def search_keywords(request):
     """Search for keywords in the email body."""
