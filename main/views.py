@@ -84,6 +84,7 @@ class GmailDataView(APIView):
         serializer = GmailMessageSerializer(detailed_messages, many=True)
         return Response(serializer.data)
 
+EMAIL_CACHE_TIMEOUT = 86400  # 24 hours
 
 def fetch_and_store_emails(request):
     """Fetch emails, analyze with spaCy, and store metadata in the database."""
@@ -105,6 +106,10 @@ def fetch_and_store_emails(request):
     messages = results.get('messages', [])
 
     for message in messages:
+        email_id = message['id']
+
+        if cache.get(f"email_{email_id}"):
+            continue  
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
 
         email_body = msg.get('snippet', '')  # Get a short preview of the email
@@ -146,6 +151,7 @@ def fetch_and_store_emails(request):
             keywords=keywords,
             user=request.user
         )
+        cache.set(f"email_{email_id}", True, timeout=EMAIL_CACHE_TIMEOUT)
 
     return JsonResponse({'message': 'Emails processed and saved successfully.'}, status=200)
 
@@ -210,8 +216,20 @@ def get_response_mail_data_time(request):
                 break
 
     return JsonResponse({'response_times': response_times})
+
+TIME_SLOT_CACHE_TIMEOUT = 86400  # Cache timeout of 1 day
+
 def get_time_slot_count(request):
-    """Get the count of emails in each predefined time slot."""
+    """Retrieve and cache the count of emails in each predefined time slot."""
+    # Retrieve cached counts if they exist
+    cache_key = "time_slot_counts"
+    cached_counts = cache.get(cache_key)
+
+    if cached_counts:
+        logger.info("Serving time slot counts from cache...")
+        return JsonResponse(cached_counts)
+
+    # If not cached, proceed to recompute counts
     service, error = get_gmail_service(request)
     if error:
         return error
@@ -220,29 +238,44 @@ def get_time_slot_count(request):
     time_slot_counts = {slot: 0 for slot, _, _ in TIME_SLOTS}
 
     for message in messages:
-        msg_details = service.users().messages().get(userId='me', id=message['id']).execute()
-        thread_id = msg_details.get('threadId')
-        messages_in_thread = get_thread_messages(service, thread_id)
+        thread_id = message.get('threadId')
 
+        # Fetch messages in thread (avoid reprocessing cached threads)
+        thread_cache_key = f"thread_{thread_id}"
+        if cache.get(thread_cache_key):
+            logger.info(f"Skipping cached thread {thread_id}")
+            continue  # Skip threads that were processed before
+
+        messages_in_thread = get_thread_messages(service, thread_id)
 
         for msg in messages_in_thread:
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
             sender = extract_email_address(headers.get('From', ''))
             timestamp_ms = int(msg.get('internalDate', 0))
-            
+
             sent_at = timezone.make_aware(
-                datetime.fromtimestamp(timestamp_ms / 1000), 
+                datetime.fromtimestamp(timestamp_ms / 1000),
                 timezone=timezone.get_current_timezone()
             )
+
             logger.info(f"Sender: {sender}, Sent at: {sent_at}")
+
+            # Classify email into a time slot
             time_slot = classify_email_by_time_slot(sent_at)
             logger.info(f"Time slot: {time_slot}")
+
             if time_slot in time_slot_counts:
                 time_slot_counts[time_slot] += 1
                 logger.info(f"Updated count for {time_slot}: {time_slot_counts[time_slot]}")
-        
+                
+        # Cache the processed thread to prevent reprocessing
+        cache.set(thread_cache_key, True, timeout=TIME_SLOT_CACHE_TIMEOUT)
+    # Cache the final time slot counts
+    cache.set(cache_key, time_slot_counts, timeout=TIME_SLOT_CACHE_TIMEOUT)
+
     logger.info(f"Final time slot counts: {time_slot_counts}")
     return JsonResponse(time_slot_counts)
+
 def search_keywords(request):
     """Search for keywords in the email body."""
     q = request.GET.get('q')
