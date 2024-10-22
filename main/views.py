@@ -16,6 +16,7 @@ from utils.email_utils import get_headers_value, get_email_body, get_gmail_servi
 from utils.func_utils import TIME_SLOTS, classify_email_by_time_slot
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
+from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -251,3 +252,25 @@ def search_keywords(request):
             return JsonResponse({'error': 'User not authenticated'}, status=403)
     else:
         return JsonResponse([])
+    
+def search_multiple_keywords(request):
+    """
+    Search for multiple keywords in the email body and return the frequency 
+    of emails containing each keyword.
+    """
+    query = request.GET.get('q')
+    
+    if not query:
+        return JsonResponse({"error": "No keywords provided"}, status=400)
+
+    keywords = [kw.strip() for kw in query.split(",") if kw.strip()]
+
+    keyword_counts = defaultdict(int)
+
+    for keyword in keywords:
+        count = EmailMetadata.objects.filter(
+            Q(subject__icontains=keyword) | Q(body__icontains=keyword)
+        ).count()
+        keyword_counts[keyword] = count
+
+    return JsonResponse(keyword_counts)    
