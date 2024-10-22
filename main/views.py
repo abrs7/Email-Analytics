@@ -244,7 +244,10 @@ def search_keywords(request):
     """Search for keywords in the email body."""
     q = request.GET.get('q')
     if q:
-        emails = EmailMetadata.objects.filter(keywords__icontains=q)
-        return JsonResponse(list(emails.values()), safe=False)
+        if request.user.is_authenticated:
+            emails = EmailMetadata.objects.filter(user=request.user, keywords__icontains=q)
+            return JsonResponse(list(emails.values()), safe=False)
+        else :
+            return JsonResponse({'error': 'User not authenticated'}, status=403)
     else:
         return JsonResponse([])
