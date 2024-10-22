@@ -279,21 +279,22 @@ def get_time_slot_count(request):
 def search_keywords(request):
     """Search for keywords in the email body."""
     q = request.GET.get('q')
-    cache_key = f"search_{q}"
+    
+    sanitized_query = q.replace(":", "_").replace(",", "_") if q else ""
+    cache_key = f"search_{sanitized_query}"
 
     cached_result = cache.get(cache_key)
     if cached_result:
         logger.info("Serving from cache...")
         return JsonResponse(cached_result, safe=False)
 
-    result = {}
+    result = []
 
     if q:
         if request.user.is_authenticated:
             emails = EmailMetadata.objects.filter(user=request.user, keywords__icontains=q)
             result = list(emails.values())
             cache.set(cache_key, result, timeout=60000)
-
             return JsonResponse(result, safe=False)
         else:
             return JsonResponse({'error': 'User not authenticated'}, status=403)
