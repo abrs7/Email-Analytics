@@ -1,5 +1,6 @@
 import spacy
 import base64
+import quopri
 # Load spaCy's pre-trained English model
 nlp = spacy.load('en_core_web_sm')
 
@@ -28,6 +29,25 @@ def find_bullet_points(text):
     return bullet_points
 
 def decode_email_body(encoded_body):
-    """Decode the Base64 email body content."""
-    decoded_bytes = base64.urlsafe_b64decode(encoded_body.encode('UTF-8'))
-    return decoded_bytes.decode('UTF-8', errors='ignore')    
+    """Decode the email body from base64."""
+    try:
+        decoded_bytes = base64.urlsafe_b64decode(encoded_body)
+        return decoded_bytes.decode('utf-8')
+    except (base64.binascii.Error, UnicodeDecodeError):
+        return quopri.decodestring(encoded_body).decode('utf-8', errors='ignore')
+
+def extract_email_body(msg):
+    """Extracts the email body from the payload."""
+    parts = msg.get('payload', {}).get('parts', [])
+    for part in parts:
+        mime_type = part.get('mimeType')
+        if mime_type == 'text/plain':
+            encoded_body = part.get('body', {}).get('data', '')
+            return decode_email_body(encoded_body)
+        elif mime_type == 'text/html':
+            encoded_body = part.get('body', {}).get('data', '')
+            return decode_email_body(encoded_body)
+
+    # Fallback to 'body' if no parts are found
+    encoded_body = msg.get('payload', {}).get('body', {}).get('data', '')
+    return decode_email_body(encoded_body) if encoded_body else "No Content"

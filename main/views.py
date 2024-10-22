@@ -11,7 +11,7 @@ from rest_framework.generics import ListAPIView
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
-from utils.nlp_utils import extract_email_entities, extract_keywords, decode_email_body, find_bullet_points
+from utils.nlp_utils import extract_email_entities, extract_keywords, decode_email_body, find_bullet_points, extract_email_body
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
 from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages, extract_email_address
@@ -88,6 +88,7 @@ EMAIL_CACHE_TIMEOUT = 86400  # 24 hours
 
 def fetch_and_store_emails(request):
     """Fetch emails, analyze with spaCy, and store metadata in the database."""
+    print(f"user: {request.user}")
     creds_data = request.session.get('credentials')
     if not creds_data:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
@@ -104,7 +105,7 @@ def fetch_and_store_emails(request):
     service = build('gmail', 'v1', credentials=creds)
     results = service.users().messages().list(userId='me').execute()
     messages = results.get('messages', [])
-
+    logger.info(f"Fetching {len(messages)} emails...")
     for message in messages:
         email_id = message['id']
 
@@ -113,10 +114,10 @@ def fetch_and_store_emails(request):
 
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
 
-        # Decode the email body
-        encoded_body = msg.get('payload', {}).get('body', {}).get('data', '')
-        email_body = decode_email_body(encoded_body)
-
+        email_body = extract_email_body(msg)
+        logger.info(f"Extracted email body: {email_body}")
+        logger.info(f"Processing email with ID: {email_id}")
+        logger.info(f"Email body: {email_body}")
         email_length = len(email_body.split())
         bullet_points = find_bullet_points (email_body)
         keywords = extract_keywords(email_body)
@@ -130,23 +131,26 @@ def fetch_and_store_emails(request):
         recipient = get_headers_value(msg['payload']['headers'], 'To') or 'Unknown Recipient'
         subject = get_headers_value(msg['payload']['headers'], 'Subject') or 'No Subject'
 
-        # Save metadata to the database
-        EmailMetadata.objects.create(
-            sender=sender,
-            recipient=recipient,
-            subject=subject,
-            email_body=email_body,
-            persons=metadata["persons"],
-            organizations=metadata["organizations"],
-            job_titles=metadata["job_titles"],
-            dates=metadata["dates"],
-            sent_at=sent_at,
-            responded=False,
-            email_length=email_length,
-            bullet_points=bullet_points,
-            keywords=keywords,
-            user=request.user
-        )
+        try:
+            EmailMetadata.objects.create(
+                sender=sender,
+                recipient=recipient,
+                subject=subject,
+                email_body=email_body,
+                persons=metadata["persons"],
+                organizations=metadata["organizations"],
+                job_titles=metadata["job_titles"],
+                dates=metadata["dates"],
+                sent_at=sent_at,
+                responded=False,
+                email_length=email_length,
+                bullet_points=bullet_points,
+                keywords=keywords,
+                user=request.user
+            )
+            print(f"Email {email_id} saved successfully.")
+        except Exception as e:
+            print(f"Failed to save email {email_id}: {str(e)}")
         cache.set(f"email_{email_id}", True, timeout=EMAIL_CACHE_TIMEOUT)
 
     return JsonResponse({'message': 'Emails processed and saved successfully.'}, status=200)
@@ -294,7 +298,7 @@ def search_keywords(request):
         else:
             return JsonResponse({'error': 'User not authenticated'}, status=403)
     else:
-        return JsonResponse([])
+        return JsonResponse([], safe=False)
     
 def search_multiple_keywords(request):
     """
