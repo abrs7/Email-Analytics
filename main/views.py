@@ -11,7 +11,7 @@ from rest_framework.generics import ListAPIView
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
-from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
+from utils.nlp_utils import extract_email_entities, extract_keywords, decode_email_body, find_bullet_points
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
 from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages, extract_email_address
@@ -109,34 +109,30 @@ def fetch_and_store_emails(request):
         email_id = message['id']
 
         if cache.get(f"email_{email_id}"):
-            continue  
+            continue
+
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
 
-        email_body = msg.get('snippet', '')  # Get a short preview of the email
-        email_length = len(email_body)
-        bullet_points = find_bullet_poits(email_body)
-        # Extract keywords from email content using NLP
+        # Decode the email body
+        encoded_body = msg.get('payload', {}).get('body', {}).get('data', '')
+        email_body = decode_email_body(encoded_body)
+
+        email_length = len(email_body.split())
+        bullet_points = find_bullet_points (email_body)
         keywords = extract_keywords(email_body)
         metadata = extract_email_entities(email_body)
-        email_body = get_email_body(msg) 
-        # Convert the timestamp to a naive datetime as google use a different timezone
+
         timestamp_ms = int(msg.get('internalDate', 0))
         sent_at_naive = datetime.fromtimestamp(timestamp_ms / 1000)
-
-        # Make the datetime timezone-aware
         sent_at = timezone.make_aware(sent_at_naive, timezone=timezone.get_current_timezone())
-        
-        sender = get_headers_value(msg['payload']['headers'], 'From')
-        recipient = get_headers_value(msg['payload']['headers'], 'To')
-        subject = get_headers_value(msg['payload']['headers'], 'Subject') 
 
-        if not sender:
-            sender = 'Unknown Sender'
-        if not recipient:
-            recipient = 'Unknown Recipient'    
-        # Save email metadata to the database
+        sender = get_headers_value(msg['payload']['headers'], 'From') or 'Unknown Sender'
+        recipient = get_headers_value(msg['payload']['headers'], 'To') or 'Unknown Recipient'
+        subject = get_headers_value(msg['payload']['headers'], 'Subject') or 'No Subject'
+
+        # Save metadata to the database
         EmailMetadata.objects.create(
-            sender=sender, 
+            sender=sender,
             recipient=recipient,
             subject=subject,
             email_body=email_body,
@@ -145,7 +141,7 @@ def fetch_and_store_emails(request):
             job_titles=metadata["job_titles"],
             dates=metadata["dates"],
             sent_at=sent_at,
-            responded=False , # Initial value; can update later
+            responded=False,
             email_length=email_length,
             bullet_points=bullet_points,
             keywords=keywords,
@@ -267,7 +263,7 @@ def get_time_slot_count(request):
             if time_slot in time_slot_counts:
                 time_slot_counts[time_slot] += 1
                 logger.info(f"Updated count for {time_slot}: {time_slot_counts[time_slot]}")
-                
+
         # Cache the processed thread to prevent reprocessing
         cache.set(thread_cache_key, True, timeout=TIME_SLOT_CACHE_TIMEOUT)
     # Cache the final time slot counts
