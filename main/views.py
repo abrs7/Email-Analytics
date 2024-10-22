@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.utils import timezone
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from urllib.parse import urlencode
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +16,9 @@ from utils.email_utils import get_headers_value, get_email_body, get_gmail_servi
 from utils.func_utils import TIME_SLOTS, classify_email_by_time_slot
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GmailDataView(APIView):
     def get(self, request, *args, **kwargs):
@@ -219,7 +222,7 @@ def get_time_slot_count(request):
         messages_in_thread = get_thread_messages(service, thread_id)
 
         sent_email = None
-        
+
         for msg in messages_in_thread:
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
             sender = headers.get('From', '')
@@ -228,7 +231,9 @@ def get_time_slot_count(request):
                 datetime.fromtimestamp(timestamp_ms / 1000), timezone=timezone.get_current_timezone()
             )
 
-            if sender == request.user.email:
+            print(f"Sender: {sender}, Sent at: {sent_at}")
+            logger.info(f"Sender: {sender}, Sent at: {sent_at}")
+            if sender.strip() == request.user.email.strip():
                 sent_email = sent_at
 
             elif sent_email and sender != request.user.email:
@@ -237,3 +242,12 @@ def get_time_slot_count(request):
                 break
 
     return JsonResponse(time_slot_counts)
+
+def search_keywords(request):
+    """Search for keywords in the email body."""
+    q = request.GET.get('q')
+    if q:
+        emails = EmailMetadata.objects.filter(keywords__icontains=q)
+        return JsonResponse(list(emails.values()), safe=False)
+    else:
+        return JsonResponse([])
