@@ -12,7 +12,8 @@ from google.auth.transport.requests import Request
 from utils.nlp_utils import extract_email_entities, extract_keywords, find_bullet_poits
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
-from utils.email_utils import get_headers_value, get_email_body
+from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages
+from utils.func_utils import TIME_SLOTS, classify_email_by_time_slot
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
 
@@ -164,3 +165,77 @@ def google_login(request):
     }
     google_auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
     return HttpResponseRedirect(google_auth_url)
+
+def get_response_mail_data_time(request):
+    creds_data = request.session.get('credentials')
+    if not creds_data:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    creds = Credentials(**creds_data)
+    service = build('gmail', 'v1', credentials=creds)
+    results = service.users().messages().list(userId='me').execute()
+    messages = results.get('messages', [])
+
+    response_times = []
+
+    for message in messages:
+        msg = service.users().messages().get(userId='me', id=message['id']).execute()
+        thread_id = msg.get('threadId')
+
+        # Fetch all messages in the thread
+        thread = service.users().threads().get(userId='me', id=thread_id).execute()
+        messages_in_thread = thread.get('messages', [])
+
+        # Identify sent and response times
+        sent_email = None
+        for m in messages_in_thread:
+            headers = {h['name']: h['value'] for h in m['payload']['headers']}
+            sender = headers.get('From', '')
+            timestamp_ms = int(m.get('internalDate', 0))
+            sent_at = timezone.make_aware(
+                datetime.fromtimestamp(timestamp_ms / 1000), timezone=timezone.get_current_timezone()
+            )
+
+            if sender == request.user.email:
+                sent_email = sent_at  
+            elif sent_email:
+                response_time = sent_at - sent_email
+                response_times.append(response_time.total_seconds() / 60)
+                break
+
+    return JsonResponse({'response_times': response_times})
+
+def get_time_slot_count(request):
+    """Get the count of emails in each predefined time slot."""
+
+    service, error = get_gmail_service(request)
+    if error:
+        return error
+
+    messages = list_gmail_messages(service)
+    time_slot_counts = {slot: 0 for slot, _, _ in TIME_SLOTS}
+
+    for message in messages:
+        msg_details = service.users().messages().get(userId='me', id=message['id']).execute()
+        thread_id = msg_details.get('threadId')
+        messages_in_thread = get_thread_messages(service, thread_id)
+
+        sent_email = None
+
+        for msg in messages_in_thread:
+            headers = {h['name']: h['value'] for h in msg['payload']['headers']}
+            sender = headers.get('From', '')
+            timestamp_ms = int(msg.get('internalDate', 0))
+            sent_at = timezone.make_aware(
+                datetime.fromtimestamp(timestamp_ms / 1000), timezone=timezone.get_current_timezone()
+            )
+
+            if sender == request.user.email:
+                sent_email = sent_at
+            elif sent_email:
+                # If a response email is found, classify it into a time slot
+                time_slot = classify_email_by_time_slot(sent_at)
+                time_slot_counts[time_slot] += 1
+                break
+
+    return JsonResponse(time_slot_counts)
