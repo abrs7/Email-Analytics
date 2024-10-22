@@ -58,3 +58,44 @@ def extract_email_address(raw_sender):
     """Extract email address from 'From' header."""
     match = re.search(r'<(.*?)>', raw_sender)
     return match.group(1) if match else raw_sender.strip()
+
+def list_sent_gmail_messages(service):
+    """List sent messages from Gmail."""
+    results = service.users().messages().list(userId='me', q='in:sent').execute()
+    messages = results.get('messages', [])
+    sent_messages = []
+
+    for message in messages:
+        msg = service.users().messages().get(userId='me', id=message['id']).execute()
+        sent_messages.append({
+            'subject': get_headers_value(msg['payload']['headers'], 'Subject'),
+            'internalDate': msg['internalDate'],
+            'message_id': msg['id'],
+        })
+
+    return sent_messages
+
+def list_received_gmail_messages(service, sent_subject, sent_at):
+    """List received messages related to the sent email."""
+    results = service.users().messages().list(userId='me', q=f'to:me subject:({sent_subject}) after:{sent_at.timestamp()}').execute()
+    messages = results.get('messages', [])
+    received_messages = []
+
+    for message in messages:
+        msg = service.users().messages().get(userId='me', id=message['id']).execute()
+        received_messages.append({
+            'subject': get_headers_value(msg['payload']['headers'], 'Subject'),
+            'internalDate': msg['internalDate'],
+            'in_reply_to': get_headers_value(msg['payload']['headers'], 'In-Reply-To'),
+            'message_id': msg['id'],
+        })
+
+    return received_messages
+
+def batch_fetch_threads(service, thread_ids):
+    """Batch fetch threads using the Gmail API."""
+    threads = []
+    for thread_id in thread_ids:
+        thread = service.users().threads().get(userId='me', id=thread_id).execute()
+        threads.append(thread)
+    return threads

@@ -15,11 +15,12 @@ from google.auth.transport.requests import Request
 from utils.nlp_utils import extract_email_entities, extract_keywords, decode_email_body, find_bullet_points, extract_email_body
 from django.http import JsonResponse, HttpResponseRedirect
 from decouple import config
-from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages, extract_email_address
+from utils.email_utils import get_headers_value, get_email_body, get_gmail_service, get_thread_messages, list_gmail_messages, extract_email_address, list_sent_gmail_messages, list_received_gmail_messages
 from utils.func_utils import TIME_SLOTS, classify_email_by_time_slot
 from .models import EmailMetadata
 from .serializers import GmailMessageSerializer, EmailMetadataSerializer
 from collections import defaultdict
+import math
 import logging
 
 logger = logging.getLogger(__name__)
@@ -332,6 +333,80 @@ def search_multiple_keywords(request):
 
     return JsonResponse(keyword_counts)
 
+def get_email_responses(request):
+    """Retrieve and cache the responses to sent emails and classify them, including response date."""
+    cache_key = "email_responses"
+    cached_responses = cache.get(cache_key)
+    response_times = []
+    if cached_responses:
+        logger.info("Serving email responses from cache...")
+        return JsonResponse(cached_responses, safe=False)
+
+    service, error = get_gmail_service(request)
+    if error:
+        return error
+
+    sent_messages = list_sent_gmail_messages(service)
+    
+    email_responses = []
+
+    for sent in sent_messages:
+        sent_subject = sent['subject']
+        sent_timestamp_ms = int(sent.get('internalDate', 0))
+        
+        sent_at = timezone.make_aware(
+            datetime.fromtimestamp(sent_timestamp_ms / 1000),
+            timezone=timezone.get_current_timezone()
+        )
+
+        print(f"Sent email subject: {sent_subject}, Sent at: {sent_at}")
+
+        # Check for responses to the sent email
+        received_messages = list_received_gmail_messages(service, sent_subject, sent_at)
+
+        for received in received_messages:
+            received_subject = received['subject']
+            received_timestamp_ms = int(received.get('internalDate', 0))
+            received_at = timezone.make_aware(
+                datetime.fromtimestamp(received_timestamp_ms / 1000),
+                timezone=timezone.get_current_timezone()
+            )
+
+            print(f"Received email subject: {received_subject}, Received at: {received_at}")
+
+            # Determine if the received email is a direct response or a thread continuation
+            if received.get('in_reply_to') == sent['message_id']:
+                response_type = 'direct_response'
+            elif sent_subject in received_subject:
+                response_type = 'thread_response'
+            else:
+                response_type = 'normal_response'  
+
+            # Calculate response date
+            response_date = received_at.date()
+            response_time = (received_at - sent_at).total_seconds() / (60 * 60 )
+
+            response_times.append(response_time)
+
+            email_responses.append({
+                'sent_email': sent,
+                'received_email': received,
+                'response_type': response_type,
+                'response_date': response_date,  
+                'response_time': response_time 
+            })
+
+    average_response_time = sum(response_times) / len(response_times) if response_times else 0 
+    average_response_time_in_hours = math.ceil(average_response_time / 60 )
+    result = {
+        'average_response_time': average_response_time_in_hours,
+        'email_responses': email_responses
+    }
+    cache.set(cache_key, result, timeout=TIME_SLOT_CACHE_TIMEOUT)
+
+    print(f"Final result of email responses: {result}")
+    return JsonResponse(result, safe=False)
+
 def get_email_statistics(request):
     """Retrieve average response time, top used keywords, average email length, and percentage of non-responded emails."""
     
@@ -342,20 +417,18 @@ def get_email_statistics(request):
 
     average_email_length = user_emails.aggregate(Avg('email_length'))['email_length__avg'] or 0
 
-    responded_emails = user_emails.filter(responded=True)
-    if responded_emails.exists():
-        response_times = []
-        for email in responded_emails:
-            response_time = email.sent_at - email.created_at  # Assuming you have a `created_at` field
-            response_times.append(response_time.total_seconds())
-        average_response_time = sum(response_times) / len(response_times)
-    else:
-        average_response_time = 0
+    responded_emails = None
+    average_response_time = 0
 
     all_keywords = []
     for email in user_emails:
-        all_keywords.extend(email.keywords.split(','))
-    top_keywords = Counter(all_keywords).most_common(5)
+        if isinstance(email.keywords, list):  # Check if keywords is a list
+            all_keywords.extend(email.keywords)  # Directly extend the list
+        elif isinstance(email.keywords, str):  # If it's a string, split it
+            all_keywords.extend(email.keywords.split(','))  # Assuming keywords are stored as a comma-separated string
+
+    top_keywords = Counter(all_keywords).most_common(10)
+
 
     total_sent_emails = user_emails.count()
     non_responded_count = user_emails.filter(responded=False).count()

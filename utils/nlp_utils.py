@@ -1,6 +1,7 @@
 import spacy
 import base64
 import quopri
+from bs4 import BeautifulSoup
 # Load spaCy's pre-trained English model
 nlp = spacy.load('en_core_web_sm')
 
@@ -15,10 +16,12 @@ def extract_email_entities(text):
 
 def extract_keywords(text):
     """Extract meaningful keywords from email text."""
-    doc = nlp(text)
+    clean_text = BeautifulSoup(text, 'html.parser').get_text(strip=True)
+    unwanted_keywords = {"\n", "read", "   ", " ", "", "\r\n\r\n"}
+    doc = nlp(clean_text)
     keywords = [
         token.text for token in doc 
-        if not token.is_stop and not token.is_punct and len(token.text) > 2
+        if not token.is_stop and not token.is_punct and len(token.text) > 2 and token.text not in unwanted_keywords
     ]
     return keywords
 
