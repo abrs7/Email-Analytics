@@ -30,5 +30,6 @@ def get_data_from_gmail(request):
     for message in messages:
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
         full_messages.append(msg)
+        print(f"Extracted email body: {msg['snippet']}")
     
     return full_messages
